@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from './db/prisma.service';
 import {
   CreateMemberDto,
@@ -6,10 +6,14 @@ import {
   CreateTeamDto,
   UpdateTaskDto,
 } from './dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AppService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async createTask(createTaskDtos: CreateTaskDto[]) {
     return this.prisma.task.createMany({
@@ -22,7 +26,7 @@ export class AppService {
       data: {
         name: createTeamDto.name,
         Members: {
-          connect: createTeamDto.memberIds.map(id => ({ id }))
+          connect: createTeamDto.memberIds.map((id) => ({ id })),
         },
       },
     });
@@ -60,5 +64,15 @@ export class AppService {
       },
       data: updateTaskDto,
     });
+  }
+
+  async login(username: string, password: string) {
+    if (username != 'user1' || password != '1234') {
+      throw new UnauthorizedException();
+    }
+    const payload = { sub: password, username: username };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
   }
 }
